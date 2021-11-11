@@ -1,5 +1,18 @@
-import React, {forwardRef, useCallback, useEffect, useImperativeHandle, useState} from 'react';
-import {FlatList, Platform, TouchableOpacity, View, Text, ListRenderItemInfo} from 'react-native';
+import React, {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useState,
+} from "react";
+import {
+  FlatList,
+  Platform,
+  TouchableOpacity,
+  View,
+  Text,
+  ListRenderItemInfo,
+} from "react-native";
 import {
   check,
   checkMultiple,
@@ -8,15 +21,15 @@ import {
   request,
   requestMultiple,
   RESULTS,
-} from 'react-native-permissions';
-import {PhotoIdentifier} from '@react-native-community/cameraroll';
-import {fetchInitialPhotos, fetchMorePhotos} from './CameraRollUtils';
-import {CameraButton} from './CameraButton';
-import FloatFullGalleryButton from './GalleryButton';
-import {ImageFile} from './typings';
-import SelectableImage from './SelectableImage';
-import {ImagePickerOptions} from 'react-native-image-picker';
-import {inAppGalleryStyles} from "./styles";
+} from "react-native-permissions";
+import { PhotoIdentifier } from "@react-native-community/cameraroll";
+import { fetchInitialPhotos, fetchMorePhotos } from "./CameraRollUtils";
+import { CameraButton } from "./CameraButton";
+import FloatFullGalleryButton from "./GalleryButton";
+import { ImageFile } from "./typings";
+import SelectableImage from "./SelectableImage";
+import { ImagePickerOptions } from "react-native-image-picker";
+import { inAppGalleryStyles } from "./styles";
 
 export interface Props {
   onImagePicked: (image: ImageFile) => void;
@@ -30,6 +43,7 @@ export interface Props {
   onPermissionBlocked?: (permission: Permission) => void;
   enableSelection?: boolean;
   onImageSelected?: (image: ImageFile, selected: boolean) => void;
+  onPhotosLoaded?: (images: ImageFile[]) => void;
   onSelectionEnd?: (images: ImageFile[]) => void;
   cancelSelectionText?: string;
   doneSelectionText?: string;
@@ -38,26 +52,30 @@ export interface Props {
 }
 
 const handlePermissionRequest = (
-  result: 'unavailable' | 'denied' | 'blocked' | 'granted',
+  result: "unavailable" | "denied" | "blocked" | "granted",
   permission: Permission,
   onPermissionGranted?: (permission: Permission) => void,
   onPermissionDenied?: (permission: Permission) => void,
-  onPermissionBlocked?: (permission: Permission) => void,
+  onPermissionBlocked?: (permission: Permission) => void
 ) => {
   switch (result) {
     case RESULTS.UNAVAILABLE:
-      console.log('This feature is not available (on this device / in this context)');
+      console.log(
+        "This feature is not available (on this device / in this context)"
+      );
       break;
     case RESULTS.DENIED:
-      console.log('The permission has not been requested / is denied but requestable');
+      console.log(
+        "The permission has not been requested / is denied but requestable"
+      );
       onPermissionDenied && onPermissionDenied(permission);
       break;
     case RESULTS.GRANTED:
-      console.log('The permission is granted');
+      console.log("The permission is granted");
       onPermissionGranted && onPermissionGranted(permission);
       break;
     case RESULTS.BLOCKED:
-      console.log('The permission is denied and not requestable anymore');
+      console.log("The permission is denied and not requestable anymore");
       onPermissionBlocked && onPermissionBlocked(permission);
       break;
   }
@@ -72,9 +90,9 @@ const IOS_WITH_CAMERA_PERMISSIONS = [PERMISSIONS.IOS.CAMERA];
 const defaultImagePickerOptions = {
   storageOptions: {
     skipBackup: true,
-    path: 'images',
+    path: "images",
   },
-  quality: 0.8
+  quality: 0.8,
 };
 
 const InAppGallery = forwardRef<any, Props>(
@@ -82,6 +100,7 @@ const InAppGallery = forwardRef<any, Props>(
     {
       onImagePicked,
       onImageSelected,
+      onPhotosLoaded,
       onSelectionEnd,
       onPermissionGranted,
       onPermissionDenied,
@@ -93,18 +112,22 @@ const InAppGallery = forwardRef<any, Props>(
       initialNumToRender = 9,
       withCamera = true,
       withFullGallery = true,
-      cancelSelectionText = 'Cancel',
-      doneSelectionText = 'DONE',
-      selectionColor = '#0284ff',
+      cancelSelectionText = "Cancel",
+      doneSelectionText = "DONE",
+      selectionColor = "#0284ff",
     },
-    ref,
+    ref
   ) => {
     const [cameraGrants, setCameraGrants] = useState<number>(0);
-    const [isSelectionEnabled, setIsSelectionEnabled] = useState<boolean>(false);
-    const [isPhotoLibraryGranted, setIsPhotoLibraryGranted] = useState<boolean>(false);
+    const [isSelectionEnabled, setIsSelectionEnabled] =
+      useState<boolean>(false);
+    const [isPhotoLibraryGranted, setIsPhotoLibraryGranted] =
+      useState<boolean>(false);
     const [photos, setPhotos] = useState<PhotoIdentifier[] | null>(null);
     const [selectedPhotos, setSelectedPhotos] = useState<PhotoIdentifier[]>([]);
-    const [selectedPhotosMap, setSelectedPhotosMap] = useState<{[key: string]: boolean}>({});
+    const [selectedPhotosMap, setSelectedPhotosMap] = useState<{
+      [key: string]: boolean;
+    }>({});
 
     const handleClearSelection = useCallback(() => {
       setIsSelectionEnabled(false);
@@ -119,11 +142,15 @@ const InAppGallery = forwardRef<any, Props>(
           handleClearSelection();
         },
       }),
-      [handleClearSelection],
+      [handleClearSelection]
     );
 
+    useEffect(() => {
+      onPhotosLoaded && onPhotosLoaded(photos);
+    }, [photos]);
+
     const isCameraGranted =
-      Platform.OS === 'android'
+      Platform.OS === "android"
         ? cameraGrants >= ANDROID_WITH_CAMERA_PERMISSIONS.length
         : cameraGrants >= IOS_WITH_CAMERA_PERMISSIONS.length;
 
@@ -131,29 +158,35 @@ const InAppGallery = forwardRef<any, Props>(
       (permission: Permission, results: any) => {
         switch (results[permission]) {
           case RESULTS.UNAVAILABLE:
-            console.log('This feature is not available (on this device / in this context)');
+            console.log(
+              "This feature is not available (on this device / in this context)"
+            );
             break;
           case RESULTS.DENIED:
-            console.log('The permission has not been requested / is denied but requestable');
+            console.log(
+              "The permission has not been requested / is denied but requestable"
+            );
             onPermissionDenied && onPermissionDenied(permission);
             break;
           case RESULTS.GRANTED:
-            console.log('The permission is granted');
+            console.log("The permission is granted");
             onPermissionGranted && onPermissionGranted(permission);
             setCameraGrants((cnt) => cnt + 1);
             break;
           case RESULTS.BLOCKED:
-            console.log('The permission is denied and not requestable anymore');
+            console.log("The permission is denied and not requestable anymore");
             onPermissionBlocked && onPermissionBlocked(permission);
             break;
         }
       },
-      [onPermissionGranted, onPermissionDenied, onPermissionBlocked],
+      [onPermissionGranted, onPermissionDenied, onPermissionBlocked]
     );
 
     const askCameraPermissions = useCallback(async () => {
       const permissions =
-        Platform.OS === 'android' ? ANDROID_WITH_CAMERA_PERMISSIONS : IOS_WITH_CAMERA_PERMISSIONS;
+        Platform.OS === "android"
+          ? ANDROID_WITH_CAMERA_PERMISSIONS
+          : IOS_WITH_CAMERA_PERMISSIONS;
       const results = await requestMultiple(permissions);
       for (let i = 0; i < permissions.length; i++) {
         askCameraPermission(permissions[i], results);
@@ -162,33 +195,44 @@ const InAppGallery = forwardRef<any, Props>(
 
     const checkCameraPermissions = useCallback(async () => {
       const permissions =
-        Platform.OS === 'android' ? ANDROID_WITH_CAMERA_PERMISSIONS : IOS_WITH_CAMERA_PERMISSIONS;
+        Platform.OS === "android"
+          ? ANDROID_WITH_CAMERA_PERMISSIONS
+          : IOS_WITH_CAMERA_PERMISSIONS;
       const results = await checkMultiple(permissions);
       for (let i = 0; i < permissions.length; i++) {
         switch (results[permissions[i]]) {
           case RESULTS.UNAVAILABLE:
-            console.log('This feature is not available (on this device / in this context)');
+            console.log(
+              "This feature is not available (on this device / in this context)"
+            );
             break;
           case RESULTS.DENIED:
-            console.log('The permission has not been requested / is denied but requestable');
+            console.log(
+              "The permission has not been requested / is denied but requestable"
+            );
             onPermissionDenied && onPermissionDenied(permissions[i]);
             askCameraPermission(permissions[i], results);
           case RESULTS.GRANTED:
-            console.log('The permission is granted');
+            console.log("The permission is granted");
             onPermissionGranted && onPermissionGranted(permissions[i]);
             setCameraGrants((cnt) => cnt + 1);
             break;
           case RESULTS.BLOCKED:
-            console.log('The permission is denied and not requestable anymore');
+            console.log("The permission is denied and not requestable anymore");
             onPermissionBlocked && onPermissionBlocked(permissions[i]);
             break;
         }
       }
-    }, [onPermissionGranted, onPermissionDenied, onPermissionBlocked, askCameraPermission]);
+    }, [
+      onPermissionGranted,
+      onPermissionDenied,
+      onPermissionBlocked,
+      askCameraPermission,
+    ]);
 
     const askPhotoLibraryPermissions = useCallback(async () => {
       const permission =
-        Platform.OS === 'android'
+        Platform.OS === "android"
           ? PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE
           : PERMISSIONS.IOS.PHOTO_LIBRARY;
       const result = await request(permission);
@@ -202,13 +246,13 @@ const InAppGallery = forwardRef<any, Props>(
           setPhotos(_photos);
         },
         onPermissionDenied,
-        onPermissionBlocked,
+        onPermissionBlocked
       );
     }, [onPermissionGranted, onPermissionDenied, onPermissionBlocked]);
 
     const checkPhotoLibraryPermissions = useCallback(async () => {
       const permission =
-        Platform.OS === 'android'
+        Platform.OS === "android"
           ? PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE
           : PERMISSIONS.IOS.PHOTO_LIBRARY;
       const result = await check(permission);
@@ -218,13 +262,22 @@ const InAppGallery = forwardRef<any, Props>(
         async () => {
           onPermissionGranted && onPermissionGranted(permission);
           setIsPhotoLibraryGranted(true);
-          const _photos = await fetchInitialPhotos(undefined, undefined, pageSize);
+          const _photos = await fetchInitialPhotos(
+            undefined,
+            undefined,
+            pageSize
+          );
           setPhotos(_photos);
         },
         askPhotoLibraryPermissions,
-        onPermissionBlocked,
+        onPermissionBlocked
       );
-    }, [onPermissionGranted, onPermissionBlocked, askPhotoLibraryPermissions, pageSize]);
+    }, [
+      onPermissionGranted,
+      onPermissionBlocked,
+      askPhotoLibraryPermissions,
+      pageSize,
+    ]);
 
     useEffect(() => {
       async function doAsyncStuff() {
@@ -257,17 +310,17 @@ const InAppGallery = forwardRef<any, Props>(
     }, [pageSize]);
 
     const renderItem = useCallback(
-      ({item, index} : ListRenderItemInfo<PhotoIdentifier>) => {
+      ({ item, index }: ListRenderItemInfo<PhotoIdentifier>) => {
         const itemUri = item.node.image.uri;
 
         const handleOnImagePress = () => {
           if (isSelectionEnabled) {
             if (itemUri in selectedPhotosMap) {
               setSelectedPhotos((spp) =>
-                spp.filter((sp) => sp.node.image.uri !== item.node.image.uri),
+                spp.filter((sp) => sp.node.image.uri !== item.node.image.uri)
               );
               setSelectedPhotosMap((smap) => {
-                const newMap = {...smap};
+                const newMap = { ...smap };
                 delete newMap[itemUri];
                 return newMap;
               });
@@ -275,7 +328,7 @@ const InAppGallery = forwardRef<any, Props>(
             } else {
               setSelectedPhotos((spp) => [...spp, item]);
               setSelectedPhotosMap((smap) => {
-                const newMap = {...smap};
+                const newMap = { ...smap };
                 newMap[itemUri] = true;
                 return newMap;
               });
@@ -290,7 +343,7 @@ const InAppGallery = forwardRef<any, Props>(
           if (!isSelectionEnabled) {
             setIsSelectionEnabled(true);
             setSelectedPhotos([item]);
-            setSelectedPhotosMap({[itemUri]: true});
+            setSelectedPhotosMap({ [itemUri]: true });
             onImageSelected && onImageSelected(item.node.image, true);
           }
         };
@@ -298,13 +351,15 @@ const InAppGallery = forwardRef<any, Props>(
         if (withCamera) {
           if (index === 0) {
             if (isCameraGranted) {
-              return <CameraButton height={imageHeight} onImagePicked={onImagePicked} imagePickerOptions={imagePickerOptions} />;
-            } else {
               return (
-                <TouchableOpacity
-                  onPress={askCameraPermissions}
+                <CameraButton
+                  height={imageHeight}
+                  onImagePicked={onImagePicked}
+                  imagePickerOptions={imagePickerOptions}
                 />
               );
+            } else {
+              return <TouchableOpacity onPress={askCameraPermissions} />;
             }
           } else {
             return (
@@ -344,11 +399,12 @@ const InAppGallery = forwardRef<any, Props>(
         onImageSelected,
         askCameraPermissions,
         imagePickerOptions,
-      ],
+      ]
     );
 
     const handleDoneSelection = useCallback(() => {
-      onSelectionEnd && onSelectionEnd(selectedPhotos.map((sp) => sp.node.image));
+      onSelectionEnd &&
+        onSelectionEnd(selectedPhotos.map((sp) => sp.node.image));
       handleClearSelection();
     }, [onSelectionEnd, selectedPhotos, handleClearSelection]);
 
@@ -357,8 +413,7 @@ const InAppGallery = forwardRef<any, Props>(
         return null;
       }
       return (
-        <View
-          style={inAppGalleryStyles.selectionHeaderContainer}>
+        <View style={inAppGalleryStyles.selectionHeaderContainer}>
           <View>
             <TouchableOpacity onPress={handleClearSelection}>
               <Text>{cancelSelectionText}</Text>
@@ -368,9 +423,9 @@ const InAppGallery = forwardRef<any, Props>(
             <TouchableOpacity onPress={handleDoneSelection}>
               <Text>
                 {doneSelectionText}
-                {' ('}
+                {" ("}
                 {selectedPhotos.length}
-                {')'}
+                {")"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -385,9 +440,14 @@ const InAppGallery = forwardRef<any, Props>(
       handleDoneSelection,
     ]);
 
-    const handleGetItemLayout = useCallback((_, index) => (
-      {length: imageHeight, offset: imageHeight * index, index}
-    ), [imageHeight]);
+    const handleGetItemLayout = useCallback(
+      (_, index) => ({
+        length: imageHeight,
+        offset: imageHeight * index,
+        index,
+      }),
+      [imageHeight]
+    );
 
     const keyExtractor = useCallback((item: PhotoIdentifier, index: number) => {
       return item.node.image.uri || index.toString();
@@ -397,30 +457,32 @@ const InAppGallery = forwardRef<any, Props>(
 
     return (
       <View style={inAppGalleryStyles.container}>
-          <FlatList
-            stickyHeaderIndices={[0]}
-            data={photos}
-            renderItem={renderItem}
-            ListHeaderComponent={renderHeader}
-            numColumns={3}
-            removeClippedSubviews={Platform.OS === 'android'}
-            keyExtractor={keyExtractor}
-            onEndReachedThreshold={0.7}
-            onEndReached={loadMorePhotos}
-            initialNumToRender={initialNumToRender}
-            getItemLayout={handleGetItemLayout}
-          />
+        <FlatList
+          stickyHeaderIndices={[0]}
+          data={photos}
+          renderItem={renderItem}
+          ListHeaderComponent={renderHeader}
+          numColumns={4}
+          removeClippedSubviews={Platform.OS === "android"}
+          keyExtractor={keyExtractor}
+          onEndReachedThreshold={0.7}
+          onEndReached={loadMorePhotos}
+          initialNumToRender={initialNumToRender}
+          getItemLayout={handleGetItemLayout}
+        />
         {withFullGallery && (
-          <View
-            style={inAppGalleryStyles.floatButtonContainer}>
-            <FloatFullGalleryButton onImagePicked={onImagePicked} imagePickerOptions={imagePickerOptions} />
+          <View style={inAppGalleryStyles.floatButtonContainer}>
+            <FloatFullGalleryButton
+              onImagePicked={onImagePicked}
+              imagePickerOptions={imagePickerOptions}
+            />
           </View>
         )}
       </View>
     );
-  },
+  }
 );
 
-InAppGallery.displayName = 'InAppGallery';
+InAppGallery.displayName = "InAppGallery";
 
 export default InAppGallery;
